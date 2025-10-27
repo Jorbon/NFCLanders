@@ -59,24 +59,12 @@ class MainActivity : ComponentActivity() {
         val contents = TagContents.readFromConnection(connection)?: return
 
         Log.i(null, "${contents.header?.toyType?.name}")
-
-        Log.i(null, "Region count A: ${contents.dataA?.regionCountID}")
-        Log.i(null, "AS: ${contents.dataA?.areaSequence0}, ${contents.dataA?.areaSequence1}")
-        Log.i(null, "Nickname: ${contents.dataA?.nickname}")
-        Log.i(null, "Money: ${contents.dataA?.money}")
-        Log.i(null, "Hat: ${contents.dataA?.hat?.name}")
-        Log.i(null, "Upgrades: ${contents.dataA?.upgrades}")
-        Log.i(null, "Write time: ${contents.dataA?.writeTime}")
-        Log.i(null, "Reset time: ${contents.dataA?.resetTime}")
-
-        Log.i(null, "Region count B: ${contents.dataB?.regionCountID}")
-        Log.i(null, "AS: ${contents.dataB?.areaSequence0}, ${contents.dataB?.areaSequence1}")
-        Log.i(null, "Nickname: ${contents.dataB?.nickname}")
-        Log.i(null, "Money: ${contents.dataB?.money}")
-        Log.i(null, "Hat: ${contents.dataB?.hat?.name}")
-        Log.i(null, "Upgrades: ${contents.dataB?.upgrades}")
-        Log.i(null, "Write time: ${contents.dataB?.writeTime}")
-        Log.i(null, "Reset time: ${contents.dataB?.resetTime}")
+        Log.i(null, "Nickname: ${contents.data?.nickname}")
+        Log.i(null, "Money: ${contents.data?.money}")
+        Log.i(null, "Hat: ${contents.data?.hat?.name}")
+        Log.i(null, "Upgrades: ${contents.data?.upgrades}")
+        Log.i(null, "Write time: ${contents.data?.writeTime}")
+        Log.i(null, "Reset time: ${contents.data?.resetTime}")
 
     }
 
@@ -123,24 +111,12 @@ class MainActivity : ComponentActivity() {
             val contents = TagContents.readFromConnection(connection)?: return
 
             Log.i(null, "${contents.header?.toyType?.name}")
-
-            Log.i(null, "Region count A: ${contents.dataA?.regionCountID}")
-            Log.i(null, "AS: ${contents.dataA?.areaSequence0}, ${contents.dataA?.areaSequence1}")
-            Log.i(null, "Nickname: ${contents.dataA?.nickname}")
-            Log.i(null, "Money: ${contents.dataA?.money}")
-            Log.i(null, "Hat: ${contents.dataA?.hat?.name}")
-            Log.i(null, "Upgrades: ${contents.dataA?.upgrades}")
-            Log.i(null, "Write time: ${contents.dataA?.writeTime}")
-            Log.i(null, "Reset time: ${contents.dataA?.resetTime}")
-
-            Log.i(null, "Region count B: ${contents.dataB?.regionCountID}")
-            Log.i(null, "AS: ${contents.dataB?.areaSequence0}, ${contents.dataB?.areaSequence1}")
-            Log.i(null, "Nickname: ${contents.dataB?.nickname}")
-            Log.i(null, "Money: ${contents.dataB?.money}")
-            Log.i(null, "Hat: ${contents.dataB?.hat?.name}")
-            Log.i(null, "Upgrades: ${contents.dataB?.upgrades}")
-            Log.i(null, "Write time: ${contents.dataB?.writeTime}")
-            Log.i(null, "Reset time: ${contents.dataB?.resetTime}")
+            Log.i(null, "Nickname: ${contents.data?.nickname}")
+            Log.i(null, "Money: ${contents.data?.money}")
+            Log.i(null, "Hat: ${contents.data?.hat?.name}")
+            Log.i(null, "Upgrades: ${contents.data?.upgrades}")
+            Log.i(null, "Write time: ${contents.data?.writeTime}")
+            Log.i(null, "Reset time: ${contents.data?.resetTime}")
 
         }
     }
