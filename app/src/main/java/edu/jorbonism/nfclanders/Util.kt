@@ -16,7 +16,7 @@ fun formatByteArray(data: ByteArray): String {
 fun numberFromBytes(data: ByteArray, offset: Int = 0, size: Int = data.size - offset): ULong {
     var n: ULong = 0u
     for (i in 0 until size) {
-        n = n or (data[i + offset].toULong() shl (i * 8))
+        n = n or (data[i + offset].toUByte().toULong() shl (i * 8))
     }
     return n
 }
