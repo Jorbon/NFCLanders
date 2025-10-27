@@ -1,6 +1,7 @@
 package edu.jorbonism.nfclanders
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.util.Log
 import edu.jorbonism.nfclanders.enums.ToyType
 import edu.jorbonism.nfclanders.enums.Character
@@ -9,6 +10,7 @@ import edu.jorbonism.nfclanders.enums.Hat
 import edu.jorbonism.nfclanders.enums.HericChallenge
 import edu.jorbonism.nfclanders.enums.Trinket
 import java.security.MessageDigest
+import java.time.LocalDateTime
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.get
@@ -239,6 +241,19 @@ class TagTime {
             time.day    = data[2].toUByte()
             time.month  = data[3].toUByte()
             time.year   = numberFromBytes(data, 4, 2).toUShort()
+            return time
+        }
+
+        fun now(): TagTime {
+            val time = TagTime()
+            val now = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                LocalDateTime.now()
+            } else return time
+            time.minute = now.minute.toUByte()
+            time.hour   = now.hour.toUByte()
+            time.day    = now.dayOfMonth.toUByte()
+            time.month  = now.monthValue.toUByte()
+            time.year   = now.year.toUShort()
             return time
         }
     }

@@ -31,11 +31,11 @@ fun calculateCRC48(data: ByteArray): ULong {
     return crc
 }
 
-fun calculateKeyA(sector: Int, uid: ByteArray): ByteArray {
-    if (sector == 0) {
+fun calculateKeyA(sectorIndex: Int, uid: ByteArray): ByteArray {
+    if (sectorIndex == 0) {
         return byteArrayOf(0x4b, 0x0b, 0x20, 0x10, 0x7c, 0xcb.toByte())
     }
-    val crc = calculateCRC48(byteArrayOf(uid[0], uid[1], uid[2], uid[3], sector.toByte()))
+    val crc = calculateCRC48(byteArrayOf(uid[0], uid[1], uid[2], uid[3], sectorIndex.toByte()))
     val key = ByteArray(6)
     for (i in 0 until key.size) {
         key[i] = (crc shr (i * 8)).toByte()

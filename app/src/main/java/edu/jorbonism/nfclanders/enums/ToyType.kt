@@ -37,7 +37,7 @@ data class ToyType(
                     entry.supercharger == supercharger
                 ) return entry
             }
-            return ToyType("Unknown", characterID, game, deco, repose, variant, lightcore, supercharger)
+            return ToyType("Unknown", characterID, game, deco, repose, variant, lightcore, supercharger, )
         }
 
         val table: Array<ToyType> = arrayOf(

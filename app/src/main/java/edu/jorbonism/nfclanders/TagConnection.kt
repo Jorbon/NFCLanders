@@ -3,6 +3,7 @@ package edu.jorbonism.nfclanders
 import android.nfc.Tag
 import android.nfc.tech.MifareClassic
 import android.util.Log
+import java.io.IOException
 
 abstract class TagConnection {
     abstract fun readBlock(block: Int): ByteArray?
@@ -43,6 +44,45 @@ class TagConnectionNFC : TagConnection() {
         mfc = null
         uid = null
         authenticatedSector = -1
+    }
+
+    fun setupCardIfBlank(): Unit? {
+        val uid = uid?: return null
+        val mfc = mfc?: return null
+
+        for (sectorIndex in 0 until 16) {
+            val newKey = calculateKeyA(sectorIndex, uid)
+            if (mfc.authenticateSectorWithKeyA(sectorIndex, newKey)) continue
+
+            var foundKey = false
+            for (key in arrayOf(
+                MifareClassic.KEY_DEFAULT,
+                byteArrayOf(0, 0, 0, 0, 0, 0),
+                MifareClassic.KEY_NFC_FORUM,
+                MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY,
+            )) {
+                if (mfc.authenticateSectorWithKeyA(sectorIndex, key)) {
+                    val blockIndex = mfc.sectorToBlock(sectorIndex) + mfc.getBlockCountInSector(sectorIndex) - 1
+                    try {
+                        val data = mfc.readBlock(blockIndex)
+                        newKey.copyInto(data, 0, 0, 6)
+                        mfc.writeBlock(blockIndex, data)
+                    } catch (e: Exception) {
+                        Log.e("Card Setup", "Error setting key A for sector $sectorIndex: $e")
+                        return null
+                    }
+                    foundKey = true
+                    break
+                }
+            }
+
+            if (!foundKey) {
+                Log.e("Card Setup", "Could not find key for sector $sectorIndex")
+                return null
+            }
+        }
+
+        return Unit
     }
 
     private fun authenticateSector(sector: Int): Unit? {
