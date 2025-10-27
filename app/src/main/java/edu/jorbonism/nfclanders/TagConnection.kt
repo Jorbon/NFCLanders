@@ -116,4 +116,11 @@ class TagConnectionDump : TagConnection() {
         data.copyInto(dump?: return null, block * 0x10, 0, 0x10)
         return Unit
     }
+
+    fun logDump() {
+        val dump = dump?: return
+        for (i in 0 until 0x40) {
+            Log.i(null, "Block ${formatByte(i.toByte())}: ${formatByteArray(dump.copyOfRange(i * 0x10, (i + 1) * 0x10))}")
+        }
+    }
 }

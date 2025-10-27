@@ -286,6 +286,16 @@ enum class Hat(val ord: UShort, val version: Int, val label: String) {
     EonHelm             (280u, 3, "Eon's Helm"                       ),
     ;
 
+    fun getData(): Array<UByte> {
+        return when (version) {
+            0 -> arrayOf(ord.toUByte(), 0u, 0u, 0u)
+            1 -> arrayOf(0u, ord.toUByte(), 0u, 0u)
+            2 -> arrayOf(0u, 0u, ord.toUByte(), 0u)
+            3 -> arrayOf(0u, 0u, 0u, (ord and 0xffu).toUByte())
+            else -> arrayOf(0u, 0u, 0u, 0u)
+        }
+    }
+
     companion object {
         fun readFromData(hat1: UShort, hat2: UByte, hat3: UByte, hat5: UByte): Hat {
             var version: Int

@@ -66,6 +66,9 @@ class MainActivity : ComponentActivity() {
         Log.i(null, "Write time: ${contents.data?.writeTime}")
         Log.i(null, "Reset time: ${contents.data?.resetTime}")
 
+        contents.writeToConnection(connection, false)?: return
+        connection.logDump()
+
     }
 
     override fun onResume() {
