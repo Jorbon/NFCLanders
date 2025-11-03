@@ -1,6 +1,5 @@
-package edu.jorbonism.nfclanders.ui.theme
+package edu.jorbonism.nfclanders.ui
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -9,18 +8,19 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary   = Color(0.80f, 0.70f, 1.00f),
+    secondary = Color(0.80f, 0.75f, 0.85f),
+    tertiary  = Color(0.95f, 0.70f, 0.80f),
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary   = Color(0.40f, 0.30f, 0.65f),
+    secondary = Color(0.40f, 0.35f, 0.45f),
+    tertiary  = Color(0.50f, 0.30f, 0.40f),
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -37,7 +37,7 @@ private val LightColorScheme = lightColorScheme(
 fun NFCLandersTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

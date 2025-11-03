@@ -10,16 +10,33 @@ import android.nfc.tech.NdefFormatable
 import android.nfc.tech.NfcA
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import edu.jorbonism.nfclanders.enums.ToyType
-import edu.jorbonism.nfclanders.enums.Character
-import edu.jorbonism.nfclanders.enums.Game
-import edu.jorbonism.nfclanders.enums.Hat
-import edu.jorbonism.nfclanders.ui.theme.NFCLandersTheme
+import androidx.activity.viewModels
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import edu.jorbonism.nfclanders.tag.TagContents
+import edu.jorbonism.nfclanders.ui.NFCLandersApp
+import kotlinx.coroutines.flow.MutableStateFlow
+
+
+enum class WriteState {
+    None,
+    WaitingForTag,
+    Success,
+    Failure,
+}
+
+class AppState(private val savedState: SavedStateHandle = SavedStateHandle()) : ViewModel() {
+    var tagContents: MutableStateFlow<TagContents?> = MutableStateFlow(null)
+    var tagDump: MutableStateFlow<ByteArray?> = MutableStateFlow(null)
+    var writeData: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    var writeHeader: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    var formatBlankTag: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    var writeState: MutableStateFlow<WriteState> = MutableStateFlow(WriteState.None)
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -28,15 +45,13 @@ class MainActivity : ComponentActivity() {
     }
     private var pendingIntent: PendingIntent? = null
     private var connection = TagConnectionNFC()
-
+    private val appState: AppState by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            NFCLandersTheme {
-                NFCLandersApp()
-            }
+            NFCLandersApp(appState)
         }
 
         if (nfcAdapter == null) {
@@ -115,37 +130,42 @@ class MainActivity : ComponentActivity() {
             connection.open(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag::class.java)
             } else {
-                intent.getParcelableExtra<Tag>(NfcAdapter.EXTRA_TAG)
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(NfcAdapter.EXTRA_TAG)
             } ?: return)
 
-//            connection.setupCardIfBlank()?: return
+//            val write = true
 //
-//            val header = TagHeader()
-//            header.toyType = ToyType("", Character.DarkSpyro.id, Game.SpyrosAdventure)
-//            header.tradingCardID = 327136225495730u
-//            val data = TagData()
-//            data.money = 55555u
-//            data.hat = Hat.Pumpkin
-//            data.upgrades.soulGem = true
-//            data.resetTime = TagTime.now()
-//            data.writeTime = TagTime.now()
-//            val contents = TagContents()
-//            contents.header = header
-//            contents.data = data
+//            if (write) {
+//                connection.setupCardIfBlank()?: return
 //
-//            contents.writeToConnection(connection, true)
+//                val header = TagHeader()
+//                header.toyType = ToyType("", Character.DebugMinionSSA.id, Deco.Normal, Game.SpyrosAdventure)
+//                header.tradingCardID = 1u
+//                val data = TagData()
+//                data.resetTime = TagTime.now()
+//                data.writeTime = TagTime.now()
+//                val contents = TagContents()
+//                contents.header = header
+//                contents.data = data
+//
+//                contents.writeToConnection(connection, true)
+//                Log.i(null, "Tag write success!")
+//            }
+
+//            logDump(connection.readDump()?: return)
 
             val contents = TagContents.readFromConnection(connection)?: return
+            Toast.makeText(this, "${contents.header?.toyType?.name}", Toast.LENGTH_SHORT).show()
 
-            Log.i(null, "${contents.header?.toyType?.name}")
-            Log.i(null, "Money: ${contents.data?.money}")
-            Log.i(null, "Hat: ${contents.data?.hat?.name}")
-            Log.i(null, "Upgrades: ${contents.data?.upgrades}")
-            Log.i(null, "Write time: ${contents.data?.writeTime}")
-            Log.i(null, "Reset time: ${contents.data?.resetTime}")
-
-//            contents.data!!.upgrades.bottomPath = true
-//            contents.writeToConnection(connection, false)
+//            Log.i(null, "${contents.header?.toyType?.name}")
+//            Log.i(null, "Trading card ID: ${contents.header?.tradingCardID}")
+//            Log.i(null, "Money: ${contents.data?.money}")
+//            Log.i(null, "Hat: ${contents.data?.hat?.label}")
+//            Log.i(null, "Upgrades: ${contents.data?.upgrades}")
+//            Log.i(null, "Write time: ${contents.data?.writeTime}")
+//            Log.i(null, "Reset time: ${contents.data?.resetTime}")
+//            Log.i(null, "Nickname: ${formatByteArray(contents.data?.nickname?: return)}")
 
         }
     }

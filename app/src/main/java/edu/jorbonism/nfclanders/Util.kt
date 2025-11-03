@@ -1,4 +1,8 @@
+@file:Suppress("unused")
 package edu.jorbonism.nfclanders
+
+import android.util.Log
+
 
 fun formatByte(byte: Byte): String {
     return byte.toUByte().toString(16).padStart(2, '0')
@@ -11,6 +15,12 @@ fun formatByteArray(data: ByteArray): String {
         line.append(' ')
     }
     return line.toString()
+}
+
+fun logDump(dump: ByteArray) {
+    for (i in 0 until 0x40) {
+        Log.i(null, "Block ${formatByte(i.toByte())}: ${formatByteArray(dump.copyOfRange(i * 0x10, (i + 1) * 0x10))}")
+    }
 }
 
 fun numberFromBytes(data: ByteArray, offset: Int = 0, size: Int = data.size - offset): ULong {

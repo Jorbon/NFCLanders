@@ -3,11 +3,10 @@ package edu.jorbonism.nfclanders
 import android.nfc.Tag
 import android.nfc.tech.MifareClassic
 import android.util.Log
-import java.io.IOException
 
 abstract class TagConnection {
-    abstract fun readBlock(block: Int): ByteArray?
-    abstract fun writeBlock(block: Int, data: ByteArray): Unit?
+    abstract fun readBlock(blockIndex: Int): ByteArray?
+    abstract fun writeBlock(blockIndex: Int, data: ByteArray): Unit?
 }
 
 
@@ -51,21 +50,37 @@ class TagConnectionNFC : TagConnection() {
         val mfc = mfc?: return null
 
         for (sectorIndex in 0 until 16) {
+            val blockIndex = mfc.sectorToBlock(sectorIndex) + mfc.getBlockCountInSector(sectorIndex) - 1
             val newKey = calculateKeyA(sectorIndex, uid)
-            if (mfc.authenticateSectorWithKeyA(sectorIndex, newKey)) continue
+
+            if (mfc.authenticateSectorWithKeyA(sectorIndex, newKey)) {
+                try {
+                    val data = mfc.readBlock(blockIndex)
+                    if (!data.copyOfRange(6, 10).contentEquals(dataSectorAccessBits)) {
+                        newKey.copyInto(data, 0, 0, 6)
+                        if (sectorIndex > 0) dataSectorAccessBits.copyInto(data, 6, 0, 4)
+                        mfc.writeBlock(blockIndex, data)
+                    }
+                } catch (e: Exception) {
+                    Log.e("Card Setup", "Error setting key A for sector $sectorIndex: $e")
+                    return null
+                }
+                continue
+            }
 
             var foundKey = false
             for (key in arrayOf(
+
                 MifareClassic.KEY_DEFAULT,
                 byteArrayOf(0, 0, 0, 0, 0, 0),
                 MifareClassic.KEY_NFC_FORUM,
                 MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY,
             )) {
                 if (mfc.authenticateSectorWithKeyA(sectorIndex, key)) {
-                    val blockIndex = mfc.sectorToBlock(sectorIndex) + mfc.getBlockCountInSector(sectorIndex) - 1
                     try {
                         val data = mfc.readBlock(blockIndex)
                         newKey.copyInto(data, 0, 0, 6)
+                        if (sectorIndex > 0) dataSectorAccessBits.copyInto(data, 6, 0, 4)
                         mfc.writeBlock(blockIndex, data)
                     } catch (e: Exception) {
                         Log.e("Card Setup", "Error setting key A for sector $sectorIndex: $e")
@@ -85,54 +100,75 @@ class TagConnectionNFC : TagConnection() {
         return Unit
     }
 
-    private fun authenticateSector(sector: Int): Unit? {
-        if (authenticatedSector == sector) return Unit
-        val success = (mfc?: return null).authenticateSectorWithKeyA(sector, calculateKeyA(sector, uid?: return null))
+    private fun authenticateSector(sectorIndex: Int): Unit? {
+        if (authenticatedSector == sectorIndex) return Unit
+        val success = (mfc?: return null).authenticateSectorWithKeyA(sectorIndex, calculateKeyA(sectorIndex, uid?: return null))
         if (!success) {
-            Log.e("TagConnectionNFC", "KeyA auth failed on sector $sector")
+            Log.e("TagConnectionNFC", "KeyA auth failed on sector $sectorIndex")
 //            this.reset()
             return null
         }
-        authenticatedSector = sector
+        authenticatedSector = sectorIndex
         // TODO: Check for read/write permissions
         return Unit
     }
 
-    override fun readBlock(block: Int): ByteArray? {
+    fun readDump(): ByteArray? {
         val mfc = mfc?: return null
-        val sector = mfc.blockToSector(block)
-        // Prevent access to last block in sector
-        if (block == mfc.sectorToBlock(sector) + mfc.getBlockCountInSector(sector) - 1) return null
+        val dump = ByteArray(1024)
+        for (blockIndex in 0 until 64) {
+            val sectorIndex = mfc.blockToSector(blockIndex)
+            this.authenticateSector(sectorIndex)?: return null
+            try {
+                mfc.readBlock(blockIndex).copyInto(dump, blockIndex * 0x10, 0, 0x10)
+            } catch (e: Exception) {
+                Log.e("TagConnectionNFC", "Dump read failed at block $blockIndex: $e")
+                return null
+            }
+        }
+        return dump
+    }
 
-        this.authenticateSector(sector)?: return null
+    override fun readBlock(blockIndex: Int): ByteArray? {
+        val mfc = mfc?: return null
+        val sectorIndex = mfc.blockToSector(blockIndex)
+        // Prevent access to last block in sector
+        if (blockIndex == mfc.sectorToBlock(sectorIndex) + mfc.getBlockCountInSector(sectorIndex) - 1) return null
+
+        this.authenticateSector(sectorIndex)?: return null
         try {
-            return mfc.readBlock(block)
+            return mfc.readBlock(blockIndex)
         } catch (e: Exception) {
-            Log.e("TagConnectionNFC", "Failed to read block $block: $e")
+            Log.e("TagConnectionNFC", "Failed to read block $blockIndex: $e")
 //            this.reset()
             return null
         }
     }
 
-    override fun writeBlock(block: Int, data: ByteArray): Unit? {
+    override fun writeBlock(blockIndex: Int, data: ByteArray): Unit? {
         val mfc = mfc?: return null
-        val sector = mfc.blockToSector(block)
-        if (block == 0) return null // Never need to edit block 0
+        val sectorIndex = mfc.blockToSector(blockIndex)
+        if (blockIndex == 0) return null // Never need to edit block 0
         // Prevent access to last block in sector
-        if (block == mfc.sectorToBlock(sector) + mfc.getBlockCountInSector(sector) - 1) return null
+        if (blockIndex == mfc.sectorToBlock(sectorIndex) + mfc.getBlockCountInSector(sectorIndex) - 1) return null
 
-        this.authenticateSector(sector)?: return null
+        this.authenticateSector(sectorIndex)?: return null
         try {
-            return mfc.writeBlock(block, data)
+            return mfc.writeBlock(blockIndex, data)
         } catch (e: Exception) {
-            Log.e("TagConnectionNFC", "Failed to write block $block: $e")
+            Log.e("TagConnectionNFC", "Failed to write block $blockIndex: $e")
 //            this.reset()
             return null
         }
+    }
+
+    companion object {
+        val dataSectorAccessBits = byteArrayOf(0x7f, 0x0f, 0x08, 0x69)
     }
 }
 
 
+@Suppress("unused")
 class TagConnectionDump : TagConnection() {
     private var dump: ByteArray? = null
 
@@ -148,19 +184,16 @@ class TagConnectionDump : TagConnection() {
         dump = null
     }
 
-    override fun readBlock(block: Int): ByteArray? {
-        return (dump?: return null).copyOfRange(block * 0x10, (block + 1) * 0x10)
+    override fun readBlock(blockIndex: Int): ByteArray? {
+        return (dump?: return null).copyOfRange(blockIndex * 0x10, (blockIndex + 1) * 0x10)
     }
 
-    override fun writeBlock(block: Int, data: ByteArray): Unit? {
-        data.copyInto(dump?: return null, block * 0x10, 0, 0x10)
+    override fun writeBlock(blockIndex: Int, data: ByteArray): Unit? {
+        data.copyInto(dump?: return null, blockIndex * 0x10, 0, 0x10)
         return Unit
     }
 
     fun logDump() {
-        val dump = dump?: return
-        for (i in 0 until 0x40) {
-            Log.i(null, "Block ${formatByte(i.toByte())}: ${formatByteArray(dump.copyOfRange(i * 0x10, (i + 1) * 0x10))}")
-        }
+        logDump(dump?: return)
     }
 }
