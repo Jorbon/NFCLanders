@@ -184,7 +184,7 @@ class TagData {
             return data2[0x02]
         }
 
-        fun readFromBytes(data1: ByteArray, data2: ByteArray?): TagData? {
+        fun readFromBytes(data1: ByteArray, data2: ByteArray?): TagData {
             val td = TagData()
 
             // Block 0

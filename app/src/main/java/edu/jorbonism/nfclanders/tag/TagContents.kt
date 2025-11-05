@@ -3,73 +3,75 @@ package edu.jorbonism.nfclanders.tag
 import android.annotation.SuppressLint
 import android.util.Log
 import edu.jorbonism.nfclanders.TagConnection
+import edu.jorbonism.nfclanders.WriteError
+import edu.jorbonism.nfclanders.formatByte
 import edu.jorbonism.nfclanders.tag.TagHeader
 import edu.jorbonism.nfclanders.formatByteArray
 import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
-class TagContents {
-    var header: TagHeader? = null
-    var data: TagData? = null
-//    var oldData: TagData? = null
+class TagContents(
+    var header: TagHeader? = null,
+    var data: TagData? = null,
+) {
 
-    fun writeToConnection(connection: TagConnection, writeHeader: Boolean): Unit? {
-        val header = header?: return null
+    fun writeToConnection(connection: TagConnection, writeHeader: Boolean): WriteError? {
+        val header = header?: return WriteError(WriteError.Stage.WritingHeader, "No header data to write.")
         // Always update block0 to match the tag
-        header.block0 = connection.readBlock(0)?: return null
+        header.block0 = connection.readBlock(0)?: return WriteError(WriteError.Stage.WritingHeader, "Failed to access block 0.")
 
         var newHeader = false
         val headerBytes = header.getBytes()
         val block1 = headerBytes.copyOfRange(0x10, 0x20)
-        val block1Tag = connection.readBlock(1)?: return null
+        val block1Tag = connection.readBlock(1)?: return WriteError(WriteError.Stage.WritingHeader, "Failed to access block 1.")
         if (!block1.contentEquals(block1Tag)) {
             // TODO: Check if header is supposed to be writeable
             if (writeHeader) {
-                connection.writeBlock(1, block1)?: {
-                    Log.w(null, "Header write failed! Aborting tag write. Likely attempted to change the identity of a real tag.")
-                    Log.w(null, "Block 1 on tag: ${formatByteArray(block1Tag)}")
-                    Log.w(null, "New block 1   : ${formatByteArray(block1)}")
-                }
+                connection.writeBlock(1, block1)?: return WriteError(WriteError.Stage.WritingHeader, "Failed to write header, likely tried to change the identity of a real Skylander.")
                 newHeader = true
             } else {
                 Log.e(null, "Header data doesn't match! Aborting tag write. Use 'write header' mode to change custom tag identity, or update the header to match.")
-                return null
+                return WriteError(WriteError.Stage.WritingHeader, "Identity doesn't match, use the correct tag or choose \"Write Header\" to change the identity of a writeable tag.")
             }
         }
 
-        val data = data?: return Unit
+        val data = data?: return null
 
         if (newHeader) {
             // New header, overwrite all data with new encryption key
             var index = 0
             val dataPairA = data.getBytes(1, 1)
             for (i in 0 until 7) {
-                writeEncryptDataBlock(connection, headerBytes, index, false, dataPairA.first.copyOfRange(i * 0x10, (i + 1) * 0x10))?: return null
+                val block = dataPairA.first.copyOfRange(i * 0x10, (i + 1) * 0x10)
+                writeEncryptDataBlock(connection, headerBytes, index, false, block)?: return WriteError(WriteError.Stage.WritingData, "Failed to write upper data block $index.")
                 index += 1
             }
             for (i in 0 until 4) {
-                writeEncryptDataBlock(connection, headerBytes, index, false, dataPairA.second.copyOfRange(i * 0x10, (i + 1) * 0x10))?: return null
+                val block = dataPairA.second.copyOfRange(i * 0x10, (i + 1) * 0x10)
+                writeEncryptDataBlock(connection, headerBytes, index, false, block)?: return WriteError(WriteError.Stage.WritingData, "Failed to write upper data block $index.")
                 index += 1
             }
 
             index = 0
             val dataPairB = data.getBytes(0, 0)
             for (i in 0 until 7) {
-                writeEncryptDataBlock(connection, headerBytes, index, true , dataPairB.first.copyOfRange(i * 0x10, (i + 1) * 0x10))?: return null
+                val block = dataPairB.first.copyOfRange(i * 0x10, (i + 1) * 0x10)
+                writeEncryptDataBlock(connection, headerBytes, index, true , block)?: return WriteError(WriteError.Stage.WritingData, "Failed to write lower data block $index.")
                 index += 1
             }
             for (i in 0 until 4) {
-                writeEncryptDataBlock(connection, headerBytes, index, true , dataPairB.second.copyOfRange(i * 0x10, (i + 1) * 0x10))?: return null
+                val block = dataPairB.second.copyOfRange(i * 0x10, (i + 1) * 0x10)
+                writeEncryptDataBlock(connection, headerBytes, index, true , block)?: return WriteError(WriteError.Stage.WritingData, "Failed to write lower data block $index.")
                 index += 1
             }
 
         } else {
             // Set up to write to correct area defined by area sequences
-            val as1A = (readDecryptDataBlock(connection, headerBytes, 0x0, false)?: return null)[0x9]
-            val as1B = (readDecryptDataBlock(connection, headerBytes, 0x0, true )?: return null)[0x9]
-            val as2A = (readDecryptDataBlock(connection, headerBytes, 0x7, false)?: return null)[0x2]
-            val as2B = (readDecryptDataBlock(connection, headerBytes, 0x7, true )?: return null)[0x2]
+            val as1A = (readDecryptDataBlock(connection, headerBytes, 0x0, false)?: return WriteError(WriteError.Stage.WritingData, "Failed to read upper area sequence 1."))[0x9]
+            val as1B = (readDecryptDataBlock(connection, headerBytes, 0x0, true )?: return WriteError(WriteError.Stage.WritingData, "Failed to read lower area sequence 1."))[0x9]
+            val as2A = (readDecryptDataBlock(connection, headerBytes, 0x7, false)?: return WriteError(WriteError.Stage.WritingData, "Failed to read upper area sequence 2."))[0x2]
+            val as2B = (readDecryptDataBlock(connection, headerBytes, 0x7, true )?: return WriteError(WriteError.Stage.WritingData, "Failed to read lower area sequence 2."))[0x2]
 
             // Just use the higher sequence + 1, even if the diff is more than 1
             val b1 = (as1A - as1B).toByte() >= 0
@@ -80,16 +82,18 @@ class TagContents {
             val dataPair = data.getBytes(as1, as2)
             var index = 0
             for (i in 0 until 7) {
-                writeEncryptDataBlock(connection, headerBytes, index, b1, dataPair.first.copyOfRange(i * 0x10, (i + 1) * 0x10))?: return null
+                val block = dataPair.first.copyOfRange(i * 0x10, (i + 1) * 0x10)
+                writeEncryptDataBlock(connection, headerBytes, index, b1, block)?: return WriteError(WriteError.Stage.WritingData, "Failed to write data block $index.")
                 index += 1
             }
             for (i in 0 until 4) {
-                writeEncryptDataBlock(connection, headerBytes, index, b2, dataPair.second.copyOfRange(i * 0x10, (i + 1) * 0x10))?: return null
+                val block = dataPair.second.copyOfRange(i * 0x10, (i + 1) * 0x10)
+                writeEncryptDataBlock(connection, headerBytes, index, b2, block)?: return WriteError(WriteError.Stage.WritingData, "Failed to write data block $index.")
                 index += 1
             }
         }
 
-        return Unit
+        return null
     }
 
     companion object {
@@ -139,35 +143,41 @@ class TagContents {
             return Unit
         }
 
-        fun readFromConnection(connection: TagConnection): TagContents? {
+        fun readFromConnection(connection: TagConnection): Pair<TagContents?, String?> {
             val headerBytes = ByteArray(0x20)
-            (connection.readBlock(0)?: return null).copyInto(headerBytes, 0x00, 0, 0x10)
-            (connection.readBlock(1)?: return null).copyInto(headerBytes, 0x10, 0, 0x10)
+            val block0 = connection.readBlock(0)?: return Pair(null, "Failed to read header block 0.")
+            val block1 = connection.readBlock(1)?: return Pair(null, "Failed to read header block 1.")
+            block0.copyInto(headerBytes, 0x00, 0, 0x10)
+            block1.copyInto(headerBytes, 0x10, 0, 0x10)
 
             val contents = TagContents()
-            contents.header = TagHeader.Companion.readFromBytes(headerBytes)?: return null
+            contents.header = TagHeader.Companion.readFromBytes(headerBytes)?: return Pair(null, "Header checksum failed.")
 
             var index = 0
             val data1A = ByteArray(0x70)
             for (i in 0 until 7) {
-                (readDecryptDataBlock(connection, headerBytes, index, false)?: return contents).copyInto(data1A, i * 0x10, 0, 0x10)
+                val block = readDecryptDataBlock(connection, headerBytes, index, false)?: return Pair(contents, "Failed to read upper data block $index.")
+                block.copyInto(data1A, i * 0x10, 0, 0x10)
                 index += 1
             }
             val data2A = ByteArray(0x40)
             for (i in 0 until 4) {
-                (readDecryptDataBlock(connection, headerBytes, index, false)?: return contents).copyInto(data2A, i * 0x10, 0, 0x10)
+                val block = readDecryptDataBlock(connection, headerBytes, index, false)?: return Pair(contents, "Failed to read upper data block $index.")
+                block.copyInto(data2A, i * 0x10, 0, 0x10)
                 index += 1
             }
 
             index = 0
             val data1B = ByteArray(0x70)
             for (i in 0 until 7) {
-                (readDecryptDataBlock(connection, headerBytes, index, true)?: return contents).copyInto(data1B, i * 0x10, 0, 0x10)
+                val block = readDecryptDataBlock(connection, headerBytes, index, true)?: return Pair(contents, "Failed to read lower data block $index.")
+                block.copyInto(data1B, i * 0x10, 0, 0x10)
                 index += 1
             }
             val data2B = ByteArray(0x40)
             for (i in 0 until 4) {
-                (readDecryptDataBlock(connection, headerBytes, index, true)?: return contents).copyInto(data2B, i * 0x10, 0, 0x10)
+                val block = readDecryptDataBlock(connection, headerBytes, index, true)?: return Pair(contents, "Failed to read lower data block $index.")
+                block.copyInto(data2B, i * 0x10, 0, 0x10)
                 index += 1
             }
 
@@ -179,12 +189,11 @@ class TagContents {
                         1.toByte() -> data1A
                         (-1).toByte() -> data1B
                         else -> {
-                            Log.e("TagContents", "Data part 1 fields have non-consecutive area sequences!")
-                            return contents
+                            return Pair(contents, "Data region 1 fields have non-consecutive area sequences.")
                         }
                     }
                 }?: data1A
-            }?: as1B?.let { data1B }?: return contents
+            }?: as1B?.let { data1B }?: return Pair(contents, "Data region 1 checksums failed.")
 
             val data2 = if (TagData.part1HasPart2(data1)) {
                 val as2A = TagData.validatePart2(data2A)
@@ -195,7 +204,7 @@ class TagContents {
                             1.toByte() -> data2A
                             (-1).toByte() -> data2B
                             else -> {
-                                Log.e("TagContents", "Data part 2 fields have non-consecutive area sequences!")
+                                Log.e("TagContents", "Data region 2 fields have non-consecutive area sequences.")
                                 null
                             }
                         }
@@ -204,7 +213,7 @@ class TagContents {
             } else null
 
             contents.data = TagData.readFromBytes(data1, data2)
-            return contents
+            return Pair(contents, null)
         }
     }
 }

@@ -322,6 +322,25 @@ enum class Character(
         VillainDriver,
         VillainVehicle,
         Trophy,
+        ;
+
+        override fun toString(): String {
+            return when (this) {
+                Character -> "Character"
+                Legendary -> "Legendary"
+                Item      -> "Item"
+                Expansion -> "Expansion"
+                Sidekick  -> "Sidekick"
+                SwapLegs  -> "Swap Legs"
+                SwapBody  -> "Swap Body"
+                Trap      -> "Trap"
+                Mini      -> "Mini"
+                Vehicle   -> "Vehicle"
+                VillainDriver -> "Villain Driver"
+                VillainVehicle -> "Villain Vehicle"
+                Trophy    -> "Trophy"
+            }
+        }
     }
 
     enum class Playability {
