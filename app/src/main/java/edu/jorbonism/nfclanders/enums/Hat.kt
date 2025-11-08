@@ -3,7 +3,7 @@ package edu.jorbonism.nfclanders.enums
 import android.util.Log
 
 enum class Hat(val ord: UShort, val game: Game, val label: String) {
-    None                (  0u, Game.SpyrosAdventure, ""                                 ),
+    None                (  0u, Game.SpyrosAdventure, "None"                             ),
     Army                (  1u, Game.SpyrosAdventure, "Combat Hat"                       ),
     French              (  2u, Game.SpyrosAdventure, "Napoleon Hat"                     ),
     Goggles             (  3u, Game.SpyrosAdventure, "Spy Gear"                         ),

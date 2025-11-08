@@ -11,37 +11,40 @@ import edu.jorbonism.nfclanders.numberFromBytes
 import edu.jorbonism.nfclanders.numberFromFlags
 
 class TagData {
-    // Metadata
-    var writeTime = TagTime()
-    var resetTime = TagTime()
-    var seenPlatforms = Platforms()
-    var secondsOnPortal: UInt = 0u
 
     // Main data
-    var nickname = ByteArray(32)
+    var nickname = ""
     var money: UShort = 0u
-    var xp1: UInt = 0u
-    var xp2: UShort = 0u
-    var xp3: UInt = 0u
     var upgrades = Upgrades()
     var hat = Hat.None
     var trinket = Trinket.None
+    var xp1: UInt = 0u
+    var xp2: UShort = 0u
+    var xp3: UInt = 0u
 
     // Extra data
     var heroicChallenges = Array<Boolean>(HeroicChallenge.entries.size) { false }
     var heroPoints: UShort = 0u
     var challengeLevel: UInt = 0u
-    var quests = ByteArray(25)
     var elementCollectionCount1: UInt = 0u
     var elementCollectionCount2: UInt = 0u
     var elementCollectionCount3: UInt = 0u
     var accoladeRank2: UInt = 0u
     var accoladeRank3: UInt = 0u
+
+    // Extra data (unsupported)
     var battlegrounds: UInt = 0u
+    var quests = ByteArray(25)
 
     // Owner info
     var ownerID = ByteArray(8)
     var ownerCount: UByte = 0u
+
+    // Metadata
+    var writeTime = TagTime()
+    var resetTime = TagTime()
+    var seenPlatforms = Platforms()
+    var secondsOnPortal: UInt = 0u
 
     // Not useful
     var lastGameBuildYearFrom2000: UByte = 0u
@@ -69,6 +72,10 @@ class TagData {
         flags2 = flags2 or ((elementCollectionCount3 and  0b11u) shl 11)
         val heroicChallenges = numberFromFlags(heroicChallenges)
         val hat = hat.getData()
+        val nicknameBytes = ByteArray(0x20)
+        nickname.substring(0 until 14).toByteArray(Charsets.ISO_8859_1).forEachIndexed { i, byte ->
+            nicknameBytes[i * 2] = byte
+        }
 
         // Block 0
         bytesFromNumber(xp1, 3).copyInto(data1, 0x00)
@@ -83,7 +90,7 @@ class TagData {
         data1[0x17] = platforms.second
         ownerID.copyInto(data1, 0x18)
         // Blocks 2 & 3
-        nickname.copyInto(data1, 0x20)
+        nicknameBytes.copyInto(data1, 0x20)
         // Block 4
         writeTime.getBytes().copyInto(data1, 0x40)
         bytesFromNumber(heroicChallenges and 0xffffffffu, 4).copyInto(data1, 0x46)
@@ -198,7 +205,11 @@ class TagData {
             val platforms3          = data1[0x17]
             td.ownerID              = data1.copyOfRange(0x18, 0x20)
             // Block 2 & 3
-            td.nickname             = data1.copyOfRange(0x20, 0x40)
+            val nicknameBytes = ByteArray(14)
+            for (i in 0 until 14) {
+                nicknameBytes[i] = data1[0x20 + i * 2]
+            }
+            td.nickname             = String(nicknameBytes, Charsets.ISO_8859_1)
             // Block 4
             td.writeTime            = TagTime.readFromBytes(data1.copyOfRange(0x40, 0x46))
             var heroicChallenges    = numberFromBytes(data1, 0x46, 4)

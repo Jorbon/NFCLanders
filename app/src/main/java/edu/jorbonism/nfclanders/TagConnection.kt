@@ -149,7 +149,7 @@ class TagConnectionNFC : TagConnection() {
                     MifareClassic.KEY_NFC_FORUM,
                     MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY,
                 )) {
-                    if (mfc.authenticateSectorWithKeyA(sectorIndex, key)) {
+                    if (this.authenticateSector(sectorIndex, key)?: return "Lost tag connection.") {
                         sectorKeys[sectorIndex] = key
                         needsWrite[sectorIndex] = true
                         break

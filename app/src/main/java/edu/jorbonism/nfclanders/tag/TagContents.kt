@@ -19,7 +19,7 @@ class TagContents(
     fun writeToConnection(connection: TagConnection, writeHeader: Boolean): WriteError? {
         val header = header?: return WriteError(WriteError.Stage.WritingHeader, "No header data to write.")
         // Always update block0 to match the tag
-        header.block0 = connection.readBlock(0)?: return WriteError(WriteError.Stage.WritingHeader, "Failed to access block 0.")
+        header.block0 = connection.readBlock(0)?: return WriteError(WriteError.Stage.WritingHeader, "Failed to access block 0. Tag may not be formatted yet.")
 
         var newHeader = false
         val headerBytes = header.getBytes()
@@ -145,7 +145,7 @@ class TagContents(
 
         fun readFromConnection(connection: TagConnection): Pair<TagContents?, String?> {
             val headerBytes = ByteArray(0x20)
-            val block0 = connection.readBlock(0)?: return Pair(null, "Failed to read header block 0.")
+            val block0 = connection.readBlock(0)?: return Pair(null, "Failed to read header block 0. Tag may not be formatted yet.")
             val block1 = connection.readBlock(1)?: return Pair(null, "Failed to read header block 1.")
             block0.copyInto(headerBytes, 0x00, 0, 0x10)
             block1.copyInto(headerBytes, 0x10, 0, 0x10)

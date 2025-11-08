@@ -1,7 +1,7 @@
 package edu.jorbonism.nfclanders.enums
 
-enum class Trinket(val ord: UByte, label: String) {
-    None                    ( 0u, ""                          ),
+enum class Trinket(val ord: UByte, val label: String) {
+    None                    ( 0u, "None"                      ),
     LuckyTie                ( 1u, "T-Bone's Lucky Tie"        ),
     Bubble                  ( 2u, "Batterson's Bubble"        ),
     DarkWaterDaisy          ( 3u, "Dark Water Daisy"          ),
