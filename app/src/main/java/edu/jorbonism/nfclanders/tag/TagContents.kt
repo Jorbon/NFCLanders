@@ -4,9 +4,6 @@ import android.annotation.SuppressLint
 import android.util.Log
 import edu.jorbonism.nfclanders.TagConnection
 import edu.jorbonism.nfclanders.WriteError
-import edu.jorbonism.nfclanders.formatByte
-import edu.jorbonism.nfclanders.tag.TagHeader
-import edu.jorbonism.nfclanders.formatByteArray
 import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
@@ -31,8 +28,8 @@ class TagContents(
                 connection.writeBlock(1, block1)?: return WriteError(WriteError.Stage.WritingHeader, "Failed to write header, likely tried to change the identity of a real Skylander.")
                 newHeader = true
             } else {
-                Log.e(null, "Header data doesn't match! Aborting tag write. Use 'write header' mode to change custom tag identity, or update the header to match.")
-                return WriteError(WriteError.Stage.WritingHeader, "Identity doesn't match, use the correct tag or choose \"Write Header\" to change the identity of a writeable tag.")
+                Log.e(null, "Identity doesn't match, use the correct tag or choose \"Write tag identity\" to change the identity of a writeable tag.")
+                return WriteError(WriteError.Stage.WritingHeader, "Identity doesn't match, use the correct tag or choose \"Write tag identity\" to change the identity of a writeable tag.")
             }
         }
 

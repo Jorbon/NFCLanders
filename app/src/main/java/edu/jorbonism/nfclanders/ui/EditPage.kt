@@ -20,12 +20,9 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldColors
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -37,19 +34,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.jorbonism.nfclanders.AppState
-import edu.jorbonism.nfclanders.NfcState
-import edu.jorbonism.nfclanders.WriteError
-import edu.jorbonism.nfclanders.formatByte
-import edu.jorbonism.nfclanders.formatByteArray
 import edu.jorbonism.nfclanders.tag.TagContents
-import edu.jorbonism.nfclanders.tag.TagHeader
 import edu.jorbonism.nfclanders.enums.Character
+import edu.jorbonism.nfclanders.enums.ToyType
 import kotlinx.coroutines.flow.update
-import java.nio.charset.Charset
 import kotlin.math.pow
 
 enum class Popup {
@@ -112,7 +103,7 @@ fun <T> EditField(
 
 
 @Composable
-fun SearchSelect(exit: () -> Unit) {
+fun SearchSelect(exit: () -> Unit, select: (ToyType) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -131,7 +122,24 @@ fun SearchSelect(exit: () -> Unit) {
                 .fillMaxHeight(0.8f)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+            ) {
+                for (entry in ToyType.table) {
+                    if (entry.nonUnique) continue
+                    Button(
+                        onClick = {
+                            select(entry)
+                            exit()
+                        },
+                    ) {
+                        Text(
+                            entry.name,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -589,14 +597,30 @@ fun EditPage(appState: AppState) {
 
     when (currentPopup) {
         Popup.None -> {}
-        Popup.ToyType -> SearchSelect(
-            { currentPopup = Popup.None }
-        )
-        Popup.Hat -> SearchSelect(
-            { currentPopup = Popup.None }
-        )
-        Popup.Trinket -> SearchSelect(
-            { currentPopup = Popup.None }
-        )
+        Popup.ToyType -> tagContents?.header?.let { header ->
+            SearchSelect(
+                { currentPopup = Popup.None },
+                {
+                    header.toyType = it
+                    appState.tagContents.update { TagContents(header, tagContents!!.data) }
+                },
+            )
+        }
+        Popup.Hat -> {
+            SearchSelect(
+                { currentPopup = Popup.None },
+                {
+
+                },
+            )
+        }
+        Popup.Trinket -> {
+            SearchSelect(
+                { currentPopup = Popup.None },
+                {
+
+                },
+            )
+        }
     }
 }

@@ -15,17 +15,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.runtime.collectAsState
-import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import edu.jorbonism.nfclanders.enums.ToyType
 import edu.jorbonism.nfclanders.tag.TagContents
-import edu.jorbonism.nfclanders.tag.TagData
-import edu.jorbonism.nfclanders.tag.TagHeader
 import edu.jorbonism.nfclanders.ui.NFCLandersApp
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 
@@ -57,11 +48,6 @@ class MainActivity : ComponentActivity() {
         } else {
             PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
         }
-
-        val header = TagHeader()
-        header.toyType = ToyType.table[8]
-        header.tradingCardID = 25u
-        appState.tagContents.update { TagContents(header, TagData()) }
     }
 
     override fun onResume() {

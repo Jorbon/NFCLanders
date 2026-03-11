@@ -73,7 +73,7 @@ class TagData {
         val heroicChallenges = numberFromFlags(heroicChallenges)
         val hat = hat.getData()
         val nicknameBytes = ByteArray(0x20)
-        nickname.substring(0 until 14).toByteArray(Charsets.ISO_8859_1).forEachIndexed { i, byte ->
+        nickname.toByteArray(Charsets.ISO_8859_1).forEachIndexed { i, byte ->
             nicknameBytes[i * 2] = byte
         }
 
